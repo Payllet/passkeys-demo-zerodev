@@ -1,26 +1,32 @@
 "use client"
 
 import {
+    ZeroDevPaymasterClient,
     createKernelAccount,
     createKernelAccountClient,
-    createZeroDevPaymasterClient
+    createZeroDevPaymasterClient,
+    gasTokenAddresses,
+    getERC20PaymasterApproveCall,
 } from "@zerodev/sdk"
 import {
     WebAuthnMode,
-    toPasskeyValidator,
-    toWebAuthnKey
+    // toPasskeyValidator,
+    // toWebAuthnKey
 } from "@zerodev/passkey-validator"
-import { bundlerActions, ENTRYPOINT_ADDRESS_V07 } from "permissionless"
+import { bundlerActions, ENTRYPOINT_ADDRESS_V06 } from "permissionless"
 import React, { useEffect, useState } from "react"
-import { createPublicClient, http, parseAbi, encodeFunctionData } from "viem"
+import { createPublicClient, http, parseAbi, encodeFunctionData, Hex, decodeFunctionData } from "viem"
 import { sepolia } from "viem/chains"
+import { EntryPoint } from "permissionless/types"
+import { toWebAuthnKey } from "./passkeys/toWebAuthnKey"
+import { toPasskeyValidator } from "./passkeys/toPasskeyValidator"
 
 const BUNDLER_URL =
-    "https://rpc.zerodev.app/api/v2/bundler/ec9a8985-9972-42d4-9879-15e21e4fe3b6"
+    "https://rpc.zerodev.app/api/v2/bundler/4babe2ab-9bae-4865-9e7a-f97ed5bccbea"
 const PAYMASTER_URL =
-    "https://rpc.zerodev.app/api/v2/paymaster/ec9a8985-9972-42d4-9879-15e21e4fe3b6"
+    "https://rpc.zerodev.app/api/v2/paymaster/4babe2ab-9bae-4865-9e7a-f97ed5bccbea"
 const PASSKEY_SERVER_URL =
-    "https://passkeys.zerodev.app/api/v3/ec9a8985-9972-42d4-9879-15e21e4fe3b6"
+    "https://passkeys.zerodev.app/api/v3/4babe2ab-9bae-4865-9e7a-f97ed5bccbea"
 const CHAIN = sepolia
 
 const contractAddress = "0x34bE7f35132E97915633BC1fc020364EA5134863"
@@ -29,12 +35,68 @@ const contractABI = parseAbi([
     "function balanceOf(address owner) external view returns (uint256 balance)"
 ])
 
+const ERC20_TOKEN_TRANSFER_ABI = [
+    {
+      inputs: [
+        { name: "_to", type: "address" },
+        { name: "_value", type: "uint256" },
+      ],
+      name: "transfer",
+      outputs: [{ name: "", type: "bool" }],
+      payable: false,
+      stateMutability: "nonpayable",
+      type: "function",
+    },
+];
+
+const ERC20_TOKEN_APPROVE_ABI = [
+    {
+      inputs: [
+        { name: "_spender", type: "address" },
+        { name: "_value", type: "uint256" },
+      ],
+      name: "approve",
+      outputs: [{ name: "", type: "bool" }],
+      payable: false,
+      stateMutability: "nonpayable",
+      type: "function",
+    },
+];
+
+const ERC20_TOKEN_ALLOWANCE_ABI = [
+    {
+        inputs:[
+            {
+                internalType: "address",
+                name: "owner",
+                type: "address"
+            },
+            {
+                internalType: "address",
+                name: "spender",
+                type: "address"
+            }
+        ],
+        name: "allowance",
+        outputs: [
+            {
+                internalType: "uint256",
+                name: "",
+                type: "uint256"
+            }
+        ],
+        stateMutability: "view",
+        type: "function"
+    }
+];
+
 const publicClient = createPublicClient({
     transport: http(BUNDLER_URL)
 })
 
 let kernelAccount: any
 let kernelClient: any
+let paymasterClient: any
 
 export default function Home() {
     const [mounted, setMounted] = useState(false)
@@ -49,7 +111,7 @@ export default function Home() {
 
     const createAccountAndClient = async (passkeyValidator: any) => {
         kernelAccount = await createKernelAccount(publicClient, {
-            entryPoint: ENTRYPOINT_ADDRESS_V07,
+            entryPoint: ENTRYPOINT_ADDRESS_V06,
             plugins: {
                 sudo: passkeyValidator
             }
@@ -57,23 +119,25 @@ export default function Home() {
 
         console.log("Kernel account created: ", kernelAccount.address)
 
+        paymasterClient = await createZeroDevPaymasterClient(
+            {
+                chain: CHAIN,
+                transport: http(PAYMASTER_URL),
+                entryPoint: ENTRYPOINT_ADDRESS_V06
+            }
+        )
+
         kernelClient = createKernelAccountClient({
             account: kernelAccount,
             chain: CHAIN,
             bundlerTransport: http(BUNDLER_URL),
-            entryPoint: ENTRYPOINT_ADDRESS_V07,
+            entryPoint: ENTRYPOINT_ADDRESS_V06,
             middleware: {
                 sponsorUserOperation: async ({ userOperation }) => {
-                    const zeroDevPaymaster = await createZeroDevPaymasterClient(
-                        {
-                            chain: CHAIN,
-                            transport: http(PAYMASTER_URL),
-                            entryPoint: ENTRYPOINT_ADDRESS_V07
-                        }
-                    )
-                    return zeroDevPaymaster.sponsorUserOperation({
+                    return paymasterClient.sponsorUserOperation({
                         userOperation,
-                        entryPoint: ENTRYPOINT_ADDRESS_V07
+                        entryPoint: ENTRYPOINT_ADDRESS_V06,
+                        gasToken: gasTokenAddresses[CHAIN.id]['6TEST']
                     })
                 }
             }
@@ -87,16 +151,19 @@ export default function Home() {
     const handleRegister = async () => {
         setIsRegistering(true)
 
+        const { startRegistration, startAuthentication } = await import("@simplewebauthn/browser");
         const webAuthnKey = await toWebAuthnKey({
             passkeyName: username,
             passkeyServerUrl: PASSKEY_SERVER_URL,
-            mode: WebAuthnMode.Register
+            mode: WebAuthnMode.Register,
+            signWithAuthenticator: startRegistration,
         })
 
         const passkeyValidator = await toPasskeyValidator(publicClient, {
             webAuthnKey,
             passkeyServerUrl: PASSKEY_SERVER_URL,
-            entryPoint: ENTRYPOINT_ADDRESS_V07
+            entryPoint: ENTRYPOINT_ADDRESS_V06,
+            signWithAuthenticator: startAuthentication,
         })
 
         await createAccountAndClient(passkeyValidator)
@@ -108,16 +175,19 @@ export default function Home() {
     const handleLogin = async () => {
         setIsLoggingIn(true)
 
+        const { startAuthentication } = await import("@simplewebauthn/browser");
         const webAuthnKey = await toWebAuthnKey({
             passkeyName: username,
             passkeyServerUrl: PASSKEY_SERVER_URL,
-            mode: WebAuthnMode.Login
+            mode: WebAuthnMode.Login,
+            signWithAuthenticator: startAuthentication,
         })
 
         const passkeyValidator = await toPasskeyValidator(publicClient, {
             webAuthnKey,
             passkeyServerUrl: PASSKEY_SERVER_URL,
-            entryPoint: ENTRYPOINT_ADDRESS_V07
+            entryPoint: ENTRYPOINT_ADDRESS_V06,
+            signWithAuthenticator: startAuthentication,
         })
 
         await createAccountAndClient(passkeyValidator)
@@ -131,29 +201,51 @@ export default function Home() {
         setIsSendingUserOp(true)
         setUserOpStatus("Sending UserOp...")
 
+        const calls: Array<{ to: Hex; value: bigint; data: Hex }> = [];
+
+        const stablecoinAddress = gasTokenAddresses[CHAIN.id]["6TEST"];
+
+        const amountToTransfer = BigInt(1000000);
+
+        const approveCall = await getERC20PaymasterApproveCall(paymasterClient as ZeroDevPaymasterClient<EntryPoint>, {
+            gasToken: stablecoinAddress,
+            approveAmount: BigInt('0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff'),
+        })
+        const approveData = decodeFunctionData({
+            abi: ERC20_TOKEN_APPROVE_ABI,
+            data: approveCall.data,
+        })
+
+        const allowance = await publicClient.readContract({
+            address: stablecoinAddress,
+            abi: ERC20_TOKEN_ALLOWANCE_ABI,
+            functionName: 'allowance',
+            args: [kernelAccount.address, approveData.args![0] as Hex]
+        });
+        if ((allowance as bigint) < BigInt('0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff') / BigInt(2)) {
+            calls.push(approveCall);
+        }
+        calls.push({
+            to: stablecoinAddress,
+            value: BigInt(0),
+            data: encodeFunctionData({
+                abi: ERC20_TOKEN_TRANSFER_ABI,
+                args: ['0x11176000cA328a2CbE62A92291Eb8d0154707b61', amountToTransfer],
+                functionName: 'transfer'
+            })
+        });
+
+        // TODO: Handle the occasional preVerificationGas error
         const userOpHash = await kernelClient.sendUserOperation({
             userOperation: {
-                callData: await kernelAccount.encodeCallData({
-                    // @dev kernel v3 does not have onErc721Received, so it will fail
-                    // to: contractAddress,
-                    // value: BigInt(0),
-                    // data: encodeFunctionData({
-                    //     abi: contractABI,
-                    //     functionName: "mint",
-                    //     args: [kernelAccount.address]
-                    // })
-                    // @dev instead we just send a simple UserOp
-                    to: "0x0000000000000000000000000000000000000000",
-                    value: BigInt(0),
-                    data: "0x"
-                })
+                callData: await kernelAccount.encodeCallData(calls)
             }
         })
 
         setUserOpHash(userOpHash)
 
         const bundlerClient = kernelClient.extend(
-            bundlerActions(ENTRYPOINT_ADDRESS_V07)
+            bundlerActions(ENTRYPOINT_ADDRESS_V06)
         )
         await bundlerClient.waitForUserOperationReceipt({
             hash: userOpHash
@@ -227,6 +319,7 @@ export default function Home() {
                         value={username}
                         onChange={(e) => setUsername(e.target.value)}
                         className="p-2 border border-gray-300 rounded-lg w-full"
+                        style={{color: "black"}}
                     />
 
                     {/* Register and Login Buttons */}
