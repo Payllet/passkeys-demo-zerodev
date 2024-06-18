@@ -34,13 +34,16 @@ import {
   parseAndNormalizeSig,
   serializePasskeyValidatorData,
   uint8ArrayToHexString,
+  base64FromArrayBuffer,
+  hexStringToUint8Array,
 } from "./utils";
 import type { WebAuthnKey } from "./toWebAuthnKey";
 
 const signMessageUsingWebAuthn = async (
   message: SignableMessage,
-  passkeyServerUrl: string,
+  passkeyServerUrl: string, // Deprecated
   chainId: number,
+  allowCredentials?: PublicKeyCredentialRequestOptionsJSON["allowCredentials"],
   signWithAuthenticator?: (options: any) => Promise<AuthenticationResponseJSON>
 ) => {
   let messageContent: string;
@@ -62,27 +65,16 @@ const signMessageUsingWebAuthn = async (
     ? messageContent.slice(2)
     : messageContent;
 
-  if (window.sessionStorage === undefined) {
-    throw new Error("sessionStorage is not available");
-  }
-  const userId = sessionStorage.getItem("userId");
-
-  // initiate signing
-  const signInitiateResponse = await fetch(
-    `${passkeyServerUrl}/sign-initiate`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ data: formattedMessage, userId }),
-      credentials: "include",
-    }
+  const challenge = base64FromArrayBuffer(
+    hexStringToUint8Array(formattedMessage),
+    true
   );
-  const signInitiateResult = await signInitiateResponse.json();
 
   // prepare assertion options
   const assertionOptions: PublicKeyCredentialRequestOptionsJSON = {
-    challenge: signInitiateResult.challenge,
-    allowCredentials: signInitiateResult.allowCredentials,
+    challenge,
+    allowCredentials,
+    // rpId: "localhost",
     userVerification: "required",
   };
 
@@ -95,22 +87,8 @@ const signMessageUsingWebAuthn = async (
     cred = await startAuthentication(assertionOptions);
   }
 
-  // verify signature from server
-  const verifyResponse = await fetch(`${passkeyServerUrl}/sign-verify`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ cred, userId }),
-    credentials: "include",
-  });
-
-  const verifyResult = await verifyResponse.json();
-
-  if (!verifyResult.success) {
-    throw new Error("Signature not verified");
-  }
-
   // get authenticator data
-  const authenticatorData = verifyResult.authenticatorData;
+  const { authenticatorData } = cred.response;
   const authenticatorDataHex = uint8ArrayToHexString(
     b64ToBytes(authenticatorData)
   );
@@ -122,7 +100,7 @@ const signMessageUsingWebAuthn = async (
   const { beforeType } = findQuoteIndices(clientDataJSON);
 
   // get signature r,s
-  const signature = verifyResult.signature;
+  const { signature } = cred.response;
   const signatureHex = uint8ArrayToHexString(b64ToBytes(signature));
   const { r, s } = parseAndNormalizeSig(signatureHex);
 
@@ -188,6 +166,7 @@ export async function toPasskeyValidator<
         message,
         passkeyServerUrl,
         chainId,
+        [{ id: webAuthnKey.credId, type: "public-key" }],
         signWithAuthenticator
       );
     },
@@ -314,6 +293,7 @@ export async function toPasskeyValidator<
           validatorAddress ?? getValidatorAddress(entryPointAddress),
         pubKeyX: webAuthnKey.pubX,
         pubKeyY: webAuthnKey.pubY,
+        credId: webAuthnKey.credId,
         authenticatorIdHash: webAuthnKey.authenticatorIdHash,
       });
     },
@@ -346,6 +326,7 @@ export async function deserializePasskeyValidator<
     validatorAddress,
     pubKeyX,
     pubKeyY,
+    credId,
     authenticatorIdHash,
   } = deserializePasskeyValidatorData(serializedData);
 
@@ -361,6 +342,7 @@ export async function deserializePasskeyValidator<
         message,
         passkeyServerUrl,
         chainId,
+        [{ id: credId, type: "public-key" }],
         signWithAuthenticator
       );
     },
@@ -481,6 +463,7 @@ export async function deserializePasskeyValidator<
         validatorAddress,
         pubKeyX,
         pubKeyY,
+        credId,
         authenticatorIdHash,
       });
     },

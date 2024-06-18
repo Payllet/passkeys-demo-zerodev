@@ -25,15 +25,11 @@ const BUNDLER_URL =
     "https://rpc.zerodev.app/api/v2/bundler/4babe2ab-9bae-4865-9e7a-f97ed5bccbea"
 const PAYMASTER_URL =
     "https://rpc.zerodev.app/api/v2/paymaster/4babe2ab-9bae-4865-9e7a-f97ed5bccbea"
-const PASSKEY_SERVER_URL =
-    "https://passkeys.zerodev.app/api/v3/4babe2ab-9bae-4865-9e7a-f97ed5bccbea"
-const CHAIN = sepolia
+// const PASSKEY_SERVER_URL =
+//     "https://passkeys.zerodev.app/api/v3/4babe2ab-9bae-4865-9e7a-f97ed5bccbea"
+const PASSKEY_SERVER_URL = process.env.NEXT_PUBLIC_PASSKEY_SERVER_URL!
 
-const contractAddress = "0x34bE7f35132E97915633BC1fc020364EA5134863"
-const contractABI = parseAbi([
-    "function mint(address _to) public",
-    "function balanceOf(address owner) external view returns (uint256 balance)"
-])
+const CHAIN = sepolia
 
 const ERC20_TOKEN_TRANSFER_ABI = [
     {
@@ -207,6 +203,7 @@ export default function Home() {
 
         const amountToTransfer = BigInt(1000000);
 
+        // TODO: Approve only ceratin amount each time as a security measure
         const approveCall = await getERC20PaymasterApproveCall(paymasterClient as ZeroDevPaymasterClient<EntryPoint>, {
             gasToken: stablecoinAddress,
             approveAmount: BigInt('0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff'),
@@ -292,7 +289,7 @@ export default function Home() {
         <main className="flex items-center justify-center min-h-screen px-4 py-24">
             <div className="w-full max-w-lg mx-auto">
                 <h1 className="text-4xl font-semibold text-center mb-12">
-                    ZeroDev Passkeys Demo
+                    Payllet Passkeys Demo (Kernel/ZeroDev based)
                 </h1>
 
                 <div className="space-y-4">
