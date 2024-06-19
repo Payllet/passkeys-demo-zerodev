@@ -20,6 +20,7 @@ import { sepolia } from "viem/chains"
 import { EntryPoint } from "permissionless/types"
 import { toWebAuthnKey } from "./passkeys/toWebAuthnKey"
 import { toPasskeyValidator } from "./passkeys/toPasskeyValidator"
+import { ERC20_TOKEN_BALANCEOF_ABI, ERC20_TOKEN_MINT_ABI, ERC20_TOKEN_APPROVE_ABI, ERC20_TOKEN_ALLOWANCE_ABI, ERC20_TOKEN_TRANSFER_ABI } from "./abi"
 
 const BUNDLER_URL =
     "https://rpc.zerodev.app/api/v2/bundler/4babe2ab-9bae-4865-9e7a-f97ed5bccbea"
@@ -30,61 +31,6 @@ const PAYMASTER_URL =
 const PASSKEY_SERVER_URL = process.env.NEXT_PUBLIC_PASSKEY_SERVER_URL!
 
 const CHAIN = sepolia
-
-const ERC20_TOKEN_TRANSFER_ABI = [
-    {
-      inputs: [
-        { name: "_to", type: "address" },
-        { name: "_value", type: "uint256" },
-      ],
-      name: "transfer",
-      outputs: [{ name: "", type: "bool" }],
-      payable: false,
-      stateMutability: "nonpayable",
-      type: "function",
-    },
-];
-
-const ERC20_TOKEN_APPROVE_ABI = [
-    {
-      inputs: [
-        { name: "_spender", type: "address" },
-        { name: "_value", type: "uint256" },
-      ],
-      name: "approve",
-      outputs: [{ name: "", type: "bool" }],
-      payable: false,
-      stateMutability: "nonpayable",
-      type: "function",
-    },
-];
-
-const ERC20_TOKEN_ALLOWANCE_ABI = [
-    {
-        inputs:[
-            {
-                internalType: "address",
-                name: "owner",
-                type: "address"
-            },
-            {
-                internalType: "address",
-                name: "spender",
-                type: "address"
-            }
-        ],
-        name: "allowance",
-        outputs: [
-            {
-                internalType: "uint256",
-                name: "",
-                type: "uint256"
-            }
-        ],
-        stateMutability: "view",
-        type: "function"
-    }
-];
 
 const publicClient = createPublicClient({
     transport: http(BUNDLER_URL)
@@ -200,6 +146,24 @@ export default function Home() {
         const calls: Array<{ to: Hex; value: bigint; data: Hex }> = [];
 
         const stablecoinAddress = gasTokenAddresses[CHAIN.id]["6TEST"];
+
+        const balance = await publicClient.readContract({
+            address: stablecoinAddress,
+            abi: ERC20_TOKEN_BALANCEOF_ABI,
+            functionName: 'balanceOf',
+            args: [kernelAccount.address]
+        });
+
+        if ((balance as bigint) < BigInt(1)) {
+            calls.push({
+                to: stablecoinAddress,
+                value: BigInt(0),
+                data: encodeFunctionData({
+                    abi: ERC20_TOKEN_MINT_ABI,
+                    args: [kernelAccount.address, BigInt(1000000000000)]
+                })
+            });
+        }
 
         const amountToTransfer = BigInt(1000000);
 
