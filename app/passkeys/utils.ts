@@ -117,8 +117,8 @@ function bytesToBase64(bytes: Uint8Array) {
  * @param {boolean} [urlMode] - If set to true, URL mode string will be returned
  * @returns {string} - Base64 representation of data
  */
-export const base64FromArrayBuffer = (
-  arrBuf: ArrayBuffer,
+export const base64FromUint8Array = (
+  bytes: Uint8Array,
   urlMode: boolean
 ): string => {
   const
@@ -128,7 +128,6 @@ export const base64FromArrayBuffer = (
     charsUrl =
       "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
 
-  const bytes = new Uint8Array(arrBuf);
   let i,
     result = "";
 

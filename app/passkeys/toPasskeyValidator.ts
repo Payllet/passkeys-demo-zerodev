@@ -34,7 +34,7 @@ import {
   parseAndNormalizeSig,
   serializePasskeyValidatorData,
   uint8ArrayToHexString,
-  base64FromArrayBuffer,
+  base64FromUint8Array,
   hexStringToUint8Array,
 } from "./utils";
 import type { WebAuthnKey } from "./toWebAuthnKey";
@@ -65,10 +65,10 @@ const signMessageUsingWebAuthn = async (
     ? messageContent.slice(2)
     : messageContent;
 
-  const challenge = base64FromArrayBuffer(
+  const challenge = base64FromUint8Array(
     hexStringToUint8Array(formattedMessage),
     true
-  );
+  )
 
   // prepare assertion options
   const assertionOptions: PublicKeyCredentialRequestOptionsJSON = {

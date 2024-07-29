@@ -45,9 +45,15 @@ export const loginOrRegisterWithWebAuthn = async ({
   let publicKeyX: Hex | undefined;
   let publicKeyY: Hex | undefined;
   let credId: string | undefined;
+
   if (mode === WebAuthnMode.Login) {
     // Get login options
-    const loginOptionsResponse = await fetch(`${passkeyServerUrl}/api/auth/start`);
+    const loginOptionsResponse = await fetch(`${passkeyServerUrl}/api/auth/start`, {
+      method: 'POST',
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
     const loginOptions = await loginOptionsResponse.json();
 
     // Start authentication (login)
@@ -76,7 +82,13 @@ export const loginOrRegisterWithWebAuthn = async ({
     publicKeyY = loginVerifyResult.publicKeyY;
   } else {
     // Get registration options
-    const registerOptionsResponse = await fetch(`${passkeyServerUrl}/api/users/register/start?username=${passkeyName}`)
+    const registerOptionsResponse = await fetch(`${passkeyServerUrl}/api/users/register/start`, {
+      method: 'POST',
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ username: passkeyName }),
+    })
     const registerOptions = await registerOptionsResponse.json();
 
     // Start registration
