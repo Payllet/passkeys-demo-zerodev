@@ -67,6 +67,9 @@ export default function Home() {
   const [mounted, setMounted] = useState(false);
   const [balanceFetched, setBalanceFetched] = useState(false);
   const [username, setUsername] = useState("");
+  const [destinationAddress, setDestinationAddress] = useState("");
+  const [userId, setUserId] = useState(0);
+  const [accessToken, setAccessToken] = useState("");
   const [accountAddress, setAccountAddress] = useState("");
   const [isKernelClientReady, setIsKernelClientReady] = useState(false);
   const [isRegistering, setIsRegistering] = useState(false);
@@ -117,6 +120,21 @@ export default function Home() {
     setAccountAddress(kernelAccount.address);
   };
 
+  const fetchTransferHistory = async (token: string) => {
+    const fetchTransferHistoryResponse = await fetch(
+      `${PASSKEY_SERVER_URL}/api/transfers?offset=0&limit=100`,
+      {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+    const transferHistory = await fetchTransferHistoryResponse.json();
+    console.log(transferHistory);
+  };
+
   // Function to be called when "Register" is clicked
   const handleRegister = async () => {
     setIsRegistering(true);
@@ -124,7 +142,7 @@ export default function Home() {
     const { startRegistration, startAuthentication } = await import(
       "@simplewebauthn/browser"
     );
-    const webAuthnKey = await toWebAuthnKey({
+    const { key: webAuthnKey, result } = await toWebAuthnKey({
       passkeyName: username,
       passkeyServerUrl: PASSKEY_SERVER_URL,
       mode: WebAuthnMode.Register,
@@ -141,6 +159,8 @@ export default function Home() {
     await createAccountAndClient(passkeyValidator);
 
     setIsRegistering(false);
+    setUserId(result.userId);
+    setAccessToken(result.accessToken);
     window.alert("Register done.  Try sending UserOps.");
   };
 
@@ -152,7 +172,7 @@ export default function Home() {
     setIsLoggingIn(true);
 
     const { startAuthentication } = await import("@simplewebauthn/browser");
-    const webAuthnKey = await toWebAuthnKey({
+    const { key: webAuthnKey, result } = await toWebAuthnKey({
       passkeyName: username,
       passkeyServerUrl: PASSKEY_SERVER_URL,
       mode: WebAuthnMode.Login,
@@ -169,19 +189,24 @@ export default function Home() {
     await createAccountAndClient(passkeyValidator);
 
     setIsLoggingIn(false);
+    setUserId(result.userId);
+    setAccessToken(result.accessToken);
     window.alert("Login done.  Try sending UserOps.");
 
-    const response = await Moralis.EvmApi.token.getWalletTokenTransfers({
-      address: kernelAccount.address,
-      chain: EvmChain.SEPOLIA,
-      // fromDate,
-      // fromBlock,
-      // order: 'DESC',
-      // toDate: ,
-      // TODO: Specify supported stablecoin addresses for the given network
-      contractAddresses: [stablecoinAddress],
-    });
-    console.warn(response.toJSON());
+    // const response = await Moralis.EvmApi.token.getWalletTokenTransfers({
+    //   address: kernelAccount.address,
+    //   chain: EvmChain.SEPOLIA,
+    //   // fromDate,
+    //   // fromBlock,
+    //   // order: 'DESC',
+    //   // toDate: ,
+    //   // TODO: Specify supported stablecoin addresses for the given network
+    //   contractAddresses: [stablecoinAddress],
+    // });
+
+    // console.warn(response.toJSON());
+
+    await fetchTransferHistory(result.accessToken);
   };
 
   // Function to be called when "Login" is clicked
@@ -251,7 +276,10 @@ export default function Home() {
       value: BigInt(0),
       data: encodeFunctionData({
         abi: ERC20_TOKEN_TRANSFER_ABI,
-        args: ["0x11176000cA328a2CbE62A92291Eb8d0154707b61", amountToTransfer],
+        args: [
+          destinationAddress || "0x11176000cA328a2CbE62A92291Eb8d0154707b61",
+          amountToTransfer,
+        ],
         functionName: "transfer",
       }),
     });
@@ -278,17 +306,19 @@ export default function Home() {
     setUserOpStatus(userOpMessage);
     setIsSendingUserOp(false);
 
-    const response = await Moralis.EvmApi.token.getWalletTokenTransfers({
-      address: kernelAccount.address,
-      chain: EvmChain.SEPOLIA,
-      // fromDate,
-      // fromBlock,
-      // order: 'DESC',
-      // toDate: ,
-      // TODO: Specify supported stablecoin addresses for the given network
-      contractAddresses: [stablecoinAddress],
-    });
-    console.warn(response.toJSON());
+    // const response = await Moralis.EvmApi.token.getWalletTokenTransfers({
+    //   address: kernelAccount.address,
+    //   chain: EvmChain.SEPOLIA,
+    //   // fromDate,
+    //   // fromBlock,
+    //   // order: 'DESC',
+    //   // toDate: ,
+    //   // TODO: Specify supported stablecoin addresses for the given network
+    //   contractAddresses: [stablecoinAddress],
+    // });
+    // console.warn(response.toJSON());
+
+    await fetchTransferHistory(accessToken);
   };
 
   useEffect(() => {
@@ -378,6 +408,16 @@ export default function Home() {
             placeholder="Your username"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
+            className="p-2 border border-gray-300 rounded-lg w-full"
+            style={{ color: "black" }}
+          />
+
+          {/* Input Box for destination address */}
+          <input
+            type="text"
+            placeholder="Address to send tokens to"
+            value={destinationAddress}
+            onChange={(e) => setDestinationAddress(e.target.value)}
             className="p-2 border border-gray-300 rounded-lg w-full"
             style={{ color: "black" }}
           />

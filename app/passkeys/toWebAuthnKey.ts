@@ -41,19 +41,28 @@ export const loginOrRegisterWithWebAuthn = async ({
   passkeyServerUrl,
   mode,
   signWithAuthenticator,
-}: WebAuthnAccountParams): Promise<{ publicKeyX: Hex; publicKeyY: Hex; credId: string; }> => {
+}: WebAuthnAccountParams): Promise<{
+  publicKeyX: Hex;
+  publicKeyY: Hex;
+  credId: string;
+  result: any;
+}> => {
   let publicKeyX: Hex | undefined;
   let publicKeyY: Hex | undefined;
   let credId: string | undefined;
+  let result: any;
 
   if (mode === WebAuthnMode.Login) {
     // Get login options
-    const loginOptionsResponse = await fetch(`${passkeyServerUrl}/api/auth/start`, {
-      method: 'POST',
-      headers: {
-        "Content-Type": "application/json",
-      },
-    });
+    const loginOptionsResponse = await fetch(
+      `${passkeyServerUrl}/api/auth/start`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }
+    );
     const loginOptions = await loginOptionsResponse.json();
 
     // Start authentication (login)
@@ -63,16 +72,22 @@ export const loginOrRegisterWithWebAuthn = async ({
     credId = loginCred.id;
 
     // Verify authentication
-    const loginVerifyResponse = await fetch(`${passkeyServerUrl}/api/auth/complete`, {
-      method: 'POST',
-      headers: {
-          'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ requestId: loginOptions.requestId, authenticationResponse: loginCred }),
-  });
+    const loginVerifyResponse = await fetch(
+      `${passkeyServerUrl}/api/auth/complete`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          requestId: loginOptions.requestId,
+          authenticationResponse: loginCred,
+        }),
+      }
+    );
 
     const loginVerifyResult = await loginVerifyResponse.json();
-    console.log(loginVerifyResult)
+    console.log(loginVerifyResult);
 
     if (!loginVerifyResult || !loginVerifyResult.accessToken) {
       throw new Error("Login not verified");
@@ -80,15 +95,19 @@ export const loginOrRegisterWithWebAuthn = async ({
     // Import the key
     publicKeyX = loginVerifyResult.publicKeyX;
     publicKeyY = loginVerifyResult.publicKeyY;
+    result = loginVerifyResult;
   } else {
     // Get registration options
-    const registerOptionsResponse = await fetch(`${passkeyServerUrl}/api/users/register/start`, {
-      method: 'POST',
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ username: passkeyName }),
-    })
+    const registerOptionsResponse = await fetch(
+      `${passkeyServerUrl}/api/users/register/start`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ username: passkeyName }),
+      }
+    );
     const registerOptions = await registerOptionsResponse.json();
 
     // Start registration
@@ -98,13 +117,19 @@ export const loginOrRegisterWithWebAuthn = async ({
     credId = registerCred.id;
 
     // Verify registration
-    const registerVerifyResponse = await fetch(`${passkeyServerUrl}/api/users/register/complete`, {
-      method: 'POST',
-      headers: {
-          'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ registrationResponse: registerCred, requestId: registerOptions.requestId }),
-    });
+    const registerVerifyResponse = await fetch(
+      `${passkeyServerUrl}/api/users/register/complete`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          registrationResponse: registerCred,
+          requestId: registerOptions.requestId,
+        }),
+      }
+    );
 
     const registerVerifyResult = await registerVerifyResponse.json();
     if (!registerVerifyResult.verified) {
@@ -114,6 +139,7 @@ export const loginOrRegisterWithWebAuthn = async ({
     // Import the key
     publicKeyX = registerVerifyResult.publicKeyX;
     publicKeyY = registerVerifyResult.publicKeyY;
+    result = registerVerifyResult;
   }
 
   if (!publicKeyX || !publicKeyY) {
@@ -122,10 +148,16 @@ export const loginOrRegisterWithWebAuthn = async ({
   if (!credId) {
     throw new Error("No credential id returned from registration credential");
   }
-  return { publicKeyX, publicKeyY, credId };
-}
+  return { publicKeyX, publicKeyY, credId, result };
+};
 
-export const toWebAuthnKeyDetails = async ({ pubKey, credId }: { pubKey: string; credId: string }): Promise<WebAuthnKey> => {
+export const toWebAuthnKeyDetails = async ({
+  pubKey,
+  credId,
+}: {
+  pubKey: string;
+  credId: string;
+}): Promise<WebAuthnKey> => {
   const authenticatorIdHash = keccak256(
     uint8ArrayToHexString(b64ToBytes(credId))
   );
@@ -164,39 +196,47 @@ export const toWebAuthnKey = async ({
   webAuthnKey,
   mode,
   signWithAuthenticator,
-}: WebAuthnAccountParams): Promise<WebAuthnKey> => {
+}: WebAuthnAccountParams): Promise<{ key: WebAuthnKey; result: any }> => {
   if (webAuthnKey) {
-    return webAuthnKey;
+    return { key: webAuthnKey, result: null };
   }
   if (mode === WebAuthnMode.Login) {
-    const { publicKeyX, publicKeyY, credId } = await loginOrRegisterWithWebAuthn({
-      passkeyName,
-      passkeyServerUrl,
-      mode,
-      signWithAuthenticator,
-    });
+    const { publicKeyX, publicKeyY, credId, result } =
+      await loginOrRegisterWithWebAuthn({
+        passkeyName,
+        passkeyServerUrl,
+        mode,
+        signWithAuthenticator,
+      });
     return {
-      pubX: BigInt(publicKeyX),
-      pubY: BigInt(publicKeyY),
-      credId,
-      authenticatorIdHash: keccak256(
-        uint8ArrayToHexString(b64ToBytes(credId))
-      ),
+      key: {
+        pubX: BigInt(publicKeyX),
+        pubY: BigInt(publicKeyY),
+        credId,
+        authenticatorIdHash: keccak256(
+          uint8ArrayToHexString(b64ToBytes(credId))
+        ),
+      },
+      result,
     };
   } else {
-    const { publicKeyX, publicKeyY, credId } = await loginOrRegisterWithWebAuthn({
-      passkeyName,
-      passkeyServerUrl,
-      mode,
-      signWithAuthenticator,
-    });
+    const { publicKeyX, publicKeyY, credId, result } =
+      await loginOrRegisterWithWebAuthn({
+        passkeyName,
+        passkeyServerUrl,
+        mode,
+        signWithAuthenticator,
+      });
     return {
-      pubX: BigInt(publicKeyX),
-      pubY: BigInt(publicKeyY),
-      credId,
-      authenticatorIdHash: keccak256(
-        uint8ArrayToHexString(b64ToBytes(credId))
-      ),
+      key: {
+        pubX: BigInt(publicKeyX),
+        pubY: BigInt(publicKeyY),
+        credId,
+        authenticatorIdHash: keccak256(
+          uint8ArrayToHexString(b64ToBytes(credId))
+        ),
+      },
+      result,
     };
   }
 };
