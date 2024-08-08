@@ -68,6 +68,7 @@ export default function Home() {
   const [balanceFetched, setBalanceFetched] = useState(false);
   const [username, setUsername] = useState("");
   const [destinationAddress, setDestinationAddress] = useState("");
+  const [transferAmount, setTransferAmount] = useState(0);
   const [userId, setUserId] = useState(0);
   const [accessToken, setAccessToken] = useState("");
   const [accountAddress, setAccountAddress] = useState("");
@@ -278,7 +279,7 @@ export default function Home() {
         abi: ERC20_TOKEN_TRANSFER_ABI,
         args: [
           destinationAddress || "0x11176000cA328a2CbE62A92291Eb8d0154707b61",
-          amountToTransfer,
+          transferAmount ? transferAmount * 10 ** 6 : amountToTransfer,
         ],
         functionName: "transfer",
       }),
@@ -418,6 +419,16 @@ export default function Home() {
             placeholder="Address to send tokens to"
             value={destinationAddress}
             onChange={(e) => setDestinationAddress(e.target.value)}
+            className="p-2 border border-gray-300 rounded-lg w-full"
+            style={{ color: "black" }}
+          />
+
+          {/* Input Box for transfer amount */}
+          <input
+            type="number"
+            placeholder="Transfer amount"
+            value={transferAmount}
+            onChange={(e) => setTransferAmount(parseInt(e.target.value))}
             className="p-2 border border-gray-300 rounded-lg w-full"
             style={{ color: "black" }}
           />
