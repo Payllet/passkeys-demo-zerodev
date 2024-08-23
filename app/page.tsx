@@ -54,6 +54,7 @@ const CHAIN = sepolia;
 
 import { getBalance } from "@wagmi/core";
 import { config } from "./wagmi.config";
+import { GetBalanceReturnType } from "wagmi/actions";
 
 const publicClient = createPublicClient({
   transport: http(BUNDLER_URL),
@@ -302,7 +303,7 @@ export default function Home() {
     });
 
     // Update the message based on the count of UserOps
-    const userOpMessage = `UserOp completed. <a href="https://jiffyscan.xyz/userOpHash/${userOpHash}?network=mumbai" target="_blank" rel="noopener noreferrer" class="text-blue-500 hover:text-blue-700">Click here to view.</a>`;
+    const userOpMessage = `UserOp completed. <a href="https://jiffyscan.xyz/userOpHash/${userOpHash}?network=sepolia" target="_blank" rel="noopener noreferrer" class="text-blue-500 hover:text-blue-700">Click here to view.</a>`;
 
     setUserOpStatus(userOpMessage);
     setIsSendingUserOp(false);
@@ -327,7 +328,7 @@ export default function Home() {
     //Implementing the setInterval method
     const interval = setInterval(async () => {
       if (!accountAddress) return;
-      const result = await getBalance(config, {
+      const result: GetBalanceReturnType = await getBalance(config, {
         address: accountAddress as Address,
         token: stablecoinAddress,
         chainId: sepolia.id,
