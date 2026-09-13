@@ -5,8 +5,8 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Payllet Passkeys Demo (Kernel/ZeroDev based)",
-  description: "",
+  title: "Payllet account recovery",
+  description: "Find funds on older Payllet smart-account addresses and move them to the current one.",
 };
 
 export default function RootLayout({

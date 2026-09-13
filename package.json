@@ -1,5 +1,5 @@
 {
-    "name": "passkey-test",
+    "name": "payllet-account-recovery",
     "version": "0.1.0",
     "private": true,
     "scripts": {
@@ -9,16 +9,15 @@
         "lint": "next lint"
     },
     "dependencies": {
-        "@moralisweb3/common-evm-utils": "2.26.9",
-        "@zerodev/sdk": "5.2.18",
-        "@zerodev/passkey-validator": "5.2.8",
-        "moralis": "2.26.9",
-        "permissionless": "^0.1.21",
+        "@noble/curves": "1.8.1",
+        "@noble/hashes": "1.7.1",
+        "@simplewebauthn/browser": "7.4.0",
         "next": "14.1.0",
+        "permissionless": "0.4.0",
         "react": "^18",
         "react-dom": "^18",
-        "viem": "2.18.4",
-        "wagmi": "2.12.1"
+        "viem": "2.46.3",
+        "webauthn-p256": "0.0.10"
     },
     "devDependencies": {
         "typescript": "^5",
@@ -30,5 +29,10 @@
         "tailwindcss": "^3.3.0",
         "eslint": "^8",
         "eslint-config-next": "14.1.0"
+    },
+    "overrides": {
+        "permissionless": {
+            "ox": "0.12.4"
+        }
     }
 }
