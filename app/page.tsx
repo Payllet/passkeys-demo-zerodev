@@ -42,7 +42,7 @@ const errorMessage = (err: unknown): string => {
 };
 
 const Amount = ({ value, decimals }: { value: bigint; decimals: number }) => (
-    <span className={value > 0n ? "text-emerald-600 font-medium" : "text-neutral-400"}>
+    <span className={value > 0n ? "text-emerald-600 font-medium" : "text-neutral-500"}>
         {formatUnits(value, decimals)}
     </span>
 );
@@ -218,16 +218,16 @@ export default function Home() {
     const canSweep = hasBuiltInBundler || bundlerOverride.trim().length > 0;
 
     return (
-        <main className="mx-auto max-w-5xl p-6 text-sm text-neutral-800">
+        <main className="mx-auto max-w-5xl p-6 text-sm text-neutral-900">
             <h1 className="text-xl font-semibold">Payllet account recovery</h1>
-            <p className="mt-2 max-w-3xl text-neutral-600">
+            <p className="mt-2 max-w-3xl text-neutral-700">
                 Each release of the smart-account library derives a different wallet
                 address from the same passkey. This page lists every address, shows what
                 each one holds, and moves the funds to the current one. It talks only to
                 public RPC endpoints and a bundler, so it keeps working while the Payllet
                 API is down.
             </p>
-            <p className="mt-2 text-neutral-500">
+            <p className="mt-2 text-neutral-600">
                 Reading passkeys for{" "}
                 <code className="rounded bg-neutral-100 px-1">{rpId || "…"}</code>. A
                 passkey registered on another domain will not appear here.
@@ -240,7 +240,7 @@ export default function Home() {
                         type="button"
                         onClick={identify}
                         disabled={identifying || loading}
-                        className="rounded bg-neutral-900 px-3 py-1.5 text-white disabled:opacity-40"
+                        className="rounded bg-neutral-900 px-3 py-1.5 text-white disabled:opacity-45"
                     >
                         {identifying ? "Waiting for two signatures…" : "Identify passkey"}
                     </button>
@@ -256,7 +256,7 @@ export default function Home() {
                         <span className="text-red-600">index must be a number</span>
                     )}
                 </div>
-                <p className="mt-2 text-neutral-500">
+                <p className="mt-2 text-neutral-600">
                     The passkey is asked to sign twice: one signature narrows its public
                     key to two candidates, the second one picks the right one.
                 </p>
@@ -282,7 +282,7 @@ export default function Home() {
                             type="button"
                             onClick={useManualCredential}
                             disabled={loading}
-                            className="w-fit rounded border px-3 py-1.5 disabled:opacity-40"
+                            className="w-fit rounded border px-3 py-1.5 disabled:opacity-45"
                         >
                             Use this credential
                         </button>
@@ -308,7 +308,7 @@ export default function Home() {
             {!hasBuiltInBundler && (
                 <section className="mt-6 border-t pt-5">
                     <h2 className="font-semibold">Bundler</h2>
-                    <p className="mt-1 text-neutral-600">
+                    <p className="mt-1 text-neutral-700">
                         This build carries no bundler key, so balances are readable but
                         nothing can be moved yet. Paste a bundler RPC URL to enable the
                         transfers. Use <code>{"{chainId}"}</code> where the URL needs the
@@ -330,7 +330,7 @@ export default function Home() {
                         type="button"
                         onClick={refreshBalances}
                         disabled={!credential || loading || anySweepBusy}
-                        className="rounded border px-2 py-1 disabled:opacity-40"
+                        className="rounded border px-2 py-1 disabled:opacity-45"
                     >
                         refresh balances
                     </button>
@@ -406,7 +406,7 @@ export default function Home() {
                                                         </td>
                                                         {!cell || cell.status === "loading" ? (
                                                             <td
-                                                                className="border-b py-1 text-neutral-400"
+                                                                className="border-b py-1 text-neutral-500"
                                                                 colSpan={span}
                                                             >
                                                                 loading…
@@ -428,7 +428,7 @@ export default function Home() {
                                                                                 .decimals
                                                                         }
                                                                     />{" "}
-                                                                    <span className="text-xs text-neutral-400">
+                                                                    <span className="text-xs text-neutral-500">
                                                                         {
                                                                             chain.nativeCurrency
                                                                                 .symbol
@@ -476,7 +476,7 @@ export default function Home() {
                                                                             cell.balances,
                                                                         )
                                                                     }
-                                                                    className="rounded border px-2 py-0.5 disabled:opacity-30"
+                                                                    className="rounded border px-2 py-0.5 disabled:opacity-45"
                                                                 >
                                                                     move
                                                                 </button>
