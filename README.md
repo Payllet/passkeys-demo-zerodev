@@ -38,6 +38,19 @@ users that domain is `signin.payllet.io`, so a deployment meant for them has to
 be served from it or a subdomain of it, with `NEXT_PUBLIC_RP_ID` set to match.
 Anywhere else the page works against passkeys registered on that same host.
 
+## Deploy
+
+The image is a two-stage build: Node produces the static export, nginx serves it
+and listens on `$PORT`. Build arguments carry the `NEXT_PUBLIC_*` values, since
+the bundle is written during the build.
+
+```
+docker build -t payllet-recovery \
+  --build-arg NEXT_PUBLIC_PIMLICO_URL=https://api.pimlico.io/v2/ \
+  --build-arg NEXT_PUBLIC_PIMLICO_API_KEY=... .
+docker run -p 8080:8080 -e PORT=8080 payllet-recovery
+```
+
 ## Develop
 
 ```

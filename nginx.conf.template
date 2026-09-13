@@ -1,0 +1,28 @@
+server {
+    listen ${PORT};
+    server_name _;
+
+    root /usr/share/nginx/html;
+
+    # A static export writes page.html rather than page/index.html, so a bare
+    # path has to be retried with the extension before it counts as missing.
+    # The miss goes through @notfound so the response carries a 404 status
+    # instead of serving the error page with 200.
+    location / {
+        try_files $uri $uri.html $uri/index.html @notfound;
+    }
+
+    location @notfound {
+        return 404;
+    }
+
+    error_page 404 /404.html;
+
+    location = /404.html {
+        internal;
+    }
+
+    location /_next/static/ {
+        add_header Cache-Control "public, max-age=31536000, immutable";
+    }
+}
