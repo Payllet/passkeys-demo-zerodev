@@ -23,10 +23,18 @@ ENV NEXT_PUBLIC_RP_ID=$NEXT_PUBLIC_RP_ID \
 RUN npm run build
 
 
-FROM nginx:1.27-alpine
+FROM node:22-alpine
 
-COPY --from=build /app/out /usr/share/nginx/html
-COPY nginx.conf.template /etc/nginx/templates/default.conf.template
+WORKDIR /app
+
+# `serve` is installed rather than fetched on demand so that a start command
+# written as `npx serve out` resolves it offline, and it reads the port to bind
+# from PORT on its own.
+RUN npm install -g serve@14.2.4
+
+COPY --from=build /app/out ./out
 
 ENV PORT=8080
 EXPOSE 8080
+
+CMD ["serve", "out"]

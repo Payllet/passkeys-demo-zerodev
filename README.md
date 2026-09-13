@@ -40,9 +40,11 @@ Anywhere else the page works against passkeys registered on that same host.
 
 ## Deploy
 
-The image is a two-stage build: Node produces the static export, nginx serves it
-and listens on `$PORT`. Build arguments carry the `NEXT_PUBLIC_*` values, since
-the bundle is written during the build.
+The image is a two-stage build: Node produces the static export, then `serve`
+hands it out on `$PORT`. Build arguments carry the `NEXT_PUBLIC_*` values, since
+the bundle is written during the build. `serve` is installed into the runtime
+image rather than fetched on demand, so a host that overrides the start command
+with `npx serve out` resolves it without reaching the network.
 
 ```
 docker build -t payllet-recovery \
