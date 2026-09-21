@@ -17,7 +17,10 @@ a bundler, so the page still works while the backend is down.
 ## Build-time configuration
 
 All optional. Without any of them the page reads addresses and balances over
-public RPC endpoints, and asks for a bundler URL before it moves anything.
+the keyless endpoints listed per chain in `app/lib/config.ts`, and asks for a
+bundler URL before it moves anything. Each chain carries more than one, because
+addresses are derived against the first chain in that list and a single
+unreachable endpoint there would otherwise leave the whole page empty.
 
 | Variable | Effect |
 | --- | --- |
@@ -25,7 +28,7 @@ public RPC endpoints, and asks for a bundler URL before it moves anything.
 | `NEXT_PUBLIC_PIMLICO_URL` | Bundler base URL, e.g. `https://api.pimlico.io/v2/`. |
 | `NEXT_PUBLIC_PIMLICO_API_KEY` | Bundler API key. |
 | `NEXT_PUBLIC_PIMLICO_POLICY_ID` | Sponsorship policy, so the sweep costs the user no gas. |
-| `NEXT_PUBLIC_ANKR_API_KEY` | Private RPC endpoints instead of the public ones. |
+| `NEXT_PUBLIC_ANKR_API_KEY` | Puts keyed Ankr endpoints ahead of the keyless ones each chain already carries. |
 
 Next inlines these at build time, so they have to be present when `next build`
 runs, not when the page is served.

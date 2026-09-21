@@ -1,4 +1,4 @@
-import { Address, Chain } from 'viem';
+import { Address, Chain, fallback, http, Transport } from 'viem';
 import { entryPoint07Address } from 'viem/account-abstraction';
 import { arbitrum, bsc, mainnet, optimism, polygon } from 'viem/chains';
 
@@ -66,6 +66,8 @@ export interface RecoveryToken {
 
 export interface RecoveryChain {
     readonly chain: Chain;
+    /** Tried in order. Every one of these answers cross-origin without a key. */
+    readonly rpcUrls: readonly string[];
     readonly ankrName: string;
     readonly tokens: readonly RecoveryToken[];
 }
@@ -73,6 +75,10 @@ export interface RecoveryChain {
 export const RECOVERY_CHAINS: readonly RecoveryChain[] = [
     {
         chain: mainnet,
+        rpcUrls: [
+            'https://ethereum-rpc.publicnode.com',
+            'https://eth.drpc.org',
+        ],
         ankrName: 'eth',
         tokens: [
             { symbol: 'USDT', address: '0xdac17f958d2ee523a2206206994597c13d831ec7', decimals: 6 },
@@ -81,6 +87,10 @@ export const RECOVERY_CHAINS: readonly RecoveryChain[] = [
     },
     {
         chain: arbitrum,
+        rpcUrls: [
+            'https://arbitrum-one-rpc.publicnode.com',
+            'https://arbitrum.drpc.org',
+        ],
         ankrName: 'arbitrum',
         tokens: [
             { symbol: 'USDT', address: '0xfd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9', decimals: 6 },
@@ -89,6 +99,10 @@ export const RECOVERY_CHAINS: readonly RecoveryChain[] = [
     },
     {
         chain: optimism,
+        rpcUrls: [
+            'https://optimism-rpc.publicnode.com',
+            'https://optimism.drpc.org',
+        ],
         ankrName: 'optimism',
         tokens: [
             { symbol: 'USDT', address: '0x94b008aa00579c1307b0ef2c499ad98a8ce58e58', decimals: 6 },
@@ -97,6 +111,10 @@ export const RECOVERY_CHAINS: readonly RecoveryChain[] = [
     },
     {
         chain: polygon,
+        rpcUrls: [
+            'https://polygon-bor-rpc.publicnode.com',
+            'https://polygon.drpc.org',
+        ],
         ankrName: 'polygon',
         tokens: [
             { symbol: 'USDT', address: '0xc2132d05d31c914a87c6611c10748aeb04b58e8f', decimals: 6 },
@@ -105,6 +123,10 @@ export const RECOVERY_CHAINS: readonly RecoveryChain[] = [
     },
     {
         chain: bsc,
+        rpcUrls: [
+            'https://bsc-rpc.publicnode.com',
+            'https://bsc.drpc.org',
+        ],
         ankrName: 'bsc',
         tokens: [
             { symbol: 'USDT', address: '0x55d398326f99059ff775485246999027b3197955', decimals: 18 },
@@ -113,10 +135,23 @@ export const RECOVERY_CHAINS: readonly RecoveryChain[] = [
     },
 ];
 
-export const rpcUrl = ({ ankrName, chain }: RecoveryChain): string | undefined =>
-    ANKR_API_KEY
-        ? `https://rpc.ankr.com/${ankrName}/${ANKR_API_KEY}`
-        : chain.rpcUrls.default.http[0];
+/**
+ * Addresses are derived against the first chain, so a single unreachable
+ * endpoint there leaves every balance unreadable. Each chain therefore carries
+ * more than one and viem moves on to the next when a call fails.
+ *
+ * Ranking stays off. It probes every endpoint on a timer whether or not a call
+ * is in flight, which a keyed provider charges for.
+ */
+export const rpcTransport = ({ ankrName, rpcUrls }: RecoveryChain): Transport => {
+    const urls = ANKR_API_KEY
+        ? [`https://rpc.ankr.com/${ankrName}/${ANKR_API_KEY}`, ...rpcUrls]
+        : rpcUrls;
+    return fallback(
+        urls.map((url) => http(url)),
+        { rank: false },
+    );
+};
 
 /**
  * `override` lets an operator point the sweep at their own bundler, which keeps

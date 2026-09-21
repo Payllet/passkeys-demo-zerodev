@@ -11,7 +11,7 @@ import {
     PIMLICO_POLICY_ID,
     RECOVERY_CHAINS,
     RecoveryChain,
-    rpcUrl,
+    rpcTransport,
 } from './config';
 
 export interface PasskeyCredential {
@@ -26,7 +26,7 @@ export const createRecoveryPublicClient = (
 ): PublicClient =>
     createPublicClient({
         chain: recoveryChain.chain,
-        transport: http(rpcUrl(recoveryChain)),
+        transport: rpcTransport(recoveryChain),
     }) as PublicClient;
 
 export const createVersionedKernelAccount = ({
