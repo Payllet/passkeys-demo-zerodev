@@ -10,6 +10,8 @@ import {
     serializePublicKey,
 } from 'webauthn-p256';
 
+import { FALLBACK_URL } from './config';
+
 export type AuthenticationResponseJSON = Awaited<
     ReturnType<typeof startAuthentication>
 >;
@@ -38,12 +40,15 @@ export async function extractCredential(rpId: string): Promise<ExtractedCredenti
         try {
             assertion = await startAuthentication({ challenge, rpId });
         } catch (err) {
-            // A relying party has to be the page's own domain or a parent of
-            // it, so a host outside the passkey's domain fails on the first
-            // prompt and will never succeed on a retry.
+            // On a host outside the passkey's domain the browser refuses the
+            // relying party unless it implements related origin requests, and
+            // it refuses on the first prompt, so a retry cannot help.
             if (err instanceof Error && err.name === 'SecurityError') {
                 throw new Error(
-                    `This page is served from ${window.location.hostname}, which is not allowed to read passkeys for ${rpId}. Open it on ${rpId} or a subdomain of it.`,
+                    `This browser will not read passkeys for ${rpId} from ${window.location.hostname}. ` +
+                        (FALLBACK_URL
+                            ? `Open ${FALLBACK_URL} instead, which works on every browser.`
+                            : `Open the page on ${rpId} or a subdomain of it.`),
                 );
             }
             cancellations++;

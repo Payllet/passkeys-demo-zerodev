@@ -22,6 +22,13 @@ const ANKR_API_KEY = process.env.NEXT_PUBLIC_ANKR_API_KEY;
 
 export const PIMLICO_POLICY_ID = process.env.NEXT_PUBLIC_PIMLICO_POLICY_ID;
 
+/**
+ * A URL for this same page on a host under the relying party. Related origin
+ * requests are what let a sibling hostname read the passkeys at all, and a
+ * client that does not implement them has nowhere to go without this.
+ */
+export const FALLBACK_URL = process.env.NEXT_PUBLIC_FALLBACK_URL;
+
 export const hasBuiltInBundler = Boolean(PIMLICO_URL && PIMLICO_API_KEY);
 
 export interface AccountVersion {

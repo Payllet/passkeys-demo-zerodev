@@ -29,6 +29,7 @@ unreachable endpoint there would otherwise leave the whole page empty.
 | `NEXT_PUBLIC_PIMLICO_API_KEY` | Bundler API key. |
 | `NEXT_PUBLIC_PIMLICO_POLICY_ID` | Sponsorship policy, so the sweep costs the user no gas. |
 | `NEXT_PUBLIC_ANKR_API_KEY` | Puts keyed Ankr endpoints ahead of the keyless ones each chain already carries. |
+| `NEXT_PUBLIC_FALLBACK_URL` | A URL for this page on a host under the relying party, offered when the browser refuses the relying party. |
 
 Next inlines these at build time, so they have to be present when `next build`
 runs, not when the page is served.
@@ -41,10 +42,14 @@ users that ID is `signin.payllet.io`, so a deployment meant for them has to be
 served from it or a subdomain of it, with `NEXT_PUBLIC_RP_ID` set to match.
 Anywhere else the page works against passkeys registered on that same host.
 
-The Payllet deployment is `recovery.signin.payllet.io`. A sibling host such as
-`recovery.payllet.io` is not a subdomain of the relying party and the browser
-refuses the request there, so that name can only redirect here — proxying it
-keeps the browser's origin wrong and still fails.
+The Payllet deployment answers on two hostnames.
+`recovery.signin.payllet.io` sits under the relying party and needs nothing from
+the browser beyond the ordinary rule. `recovery.payllet.io` is a sibling rather
+than a subdomain, and reaches the same passkeys through related origin requests:
+the browser fetches `https://signin.payllet.io/.well-known/webauthn`, finds the
+origin listed, and allows the ceremony. Chrome and Edge implement this from 128,
+Safari from 18 and Firefox from 152; an older client finds no passkey there and
+is sent to the first hostname, which is why both stay served.
 
 The relying party ID is not part of the account address: it selects which
 passkey signs, and the address comes from the public key, the credential ID
