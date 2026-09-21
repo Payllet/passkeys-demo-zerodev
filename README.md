@@ -32,11 +32,21 @@ runs, not when the page is served.
 
 ## Domain
 
-A passkey is readable only from the domain it was registered against. Served
-from anywhere else, the page loads but finds no credentials. For Payllet's own
-users that domain is `signin.payllet.io`, so a deployment meant for them has to
-be served from it or a subdomain of it, with `NEXT_PUBLIC_RP_ID` set to match.
+A passkey is readable only from the domain it was registered against, and a
+relying party ID has to be the serving host or a parent of it. For Payllet's own
+users that ID is `signin.payllet.io`, so a deployment meant for them has to be
+served from it or a subdomain of it, with `NEXT_PUBLIC_RP_ID` set to match.
 Anywhere else the page works against passkeys registered on that same host.
+
+The Payllet deployment is `recovery.signin.payllet.io`. A sibling host such as
+`recovery.payllet.io` is not a subdomain of the relying party and the browser
+refuses the request there, so that name can only redirect here — proxying it
+keeps the browser's origin wrong and still fails.
+
+The relying party ID is not part of the account address: it selects which
+passkey signs, and the address comes from the public key, the credential ID
+hash and the validator alone. A deployment that reads the right passkey from a
+different host therefore derives the same addresses.
 
 ## Deploy
 

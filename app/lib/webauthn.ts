@@ -37,7 +37,15 @@ export async function extractCredential(rpId: string): Promise<ExtractedCredenti
         let assertion: AuthenticationResponseJSON;
         try {
             assertion = await startAuthentication({ challenge, rpId });
-        } catch {
+        } catch (err) {
+            // A relying party has to be the page's own domain or a parent of
+            // it, so a host outside the passkey's domain fails on the first
+            // prompt and will never succeed on a retry.
+            if (err instanceof Error && err.name === 'SecurityError') {
+                throw new Error(
+                    `This page is served from ${window.location.hostname}, which is not allowed to read passkeys for ${rpId}. Open it on ${rpId} or a subdomain of it.`,
+                );
+            }
             cancellations++;
             continue;
         }
